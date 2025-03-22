@@ -1,20 +1,24 @@
-<script>
-export default {
-  name: 'RegisterForm',
-  data() {
-    return {
-      username: '',
-      email: '',
-      password: ''
-    }
-  },
-  methods: {
-    handleRegister() {
-      console.log('Username:', this.username)
-      console.log('Email:', this.email)
-      console.log('Password:', this.password)
-      // Add register logic here
-    }
+<script setup lang="ts">
+import { ref } from 'vue'
+import axios from 'axios'
+import { useRouter } from 'vue-router'
+
+const username = ref('') // ไม่ใช้จริงใน backend ตอนนี้
+const email = ref('')
+const password = ref('')
+const router = useRouter()
+
+const handleRegister = async () => {
+  try {
+    const response = await axios.post('http://localhost:5000/api/register', {
+      email: email.value,
+      password: password.value
+    })
+    alert('Register successful. You can now log in.')
+    router.push('/login')
+  } catch (error) {
+    alert('Registration failed.')
+    console.error(error)
   }
 }
 </script>
@@ -41,6 +45,6 @@ export default {
 
 <style scoped>
 .register-form {
-  /* สามารถปรับสไตล์เพิ่มเติมได้ */
+  /* ปรับแต่งเพิ่มเติมได้ */
 }
 </style>

@@ -1,18 +1,28 @@
-<script>
-export default {
-  name: 'LoginForm',
-  data() {
-    return {
-      email: '',
-      password: ''
+<script setup lang="ts">
+import { ref } from 'vue'
+import axios from 'axios'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth' // สมมุติว่าใช้ Pinia
+
+const email = ref('')
+const password = ref('')
+const router = useRouter()
+const authStore = useAuthStore()
+
+const handleLogin = async () => {
+  try {
+    const response = await axios.post('http://localhost:5000/api/login', {
+      email: email.value,
+      password: password.value
+    })
+    const token = response.data.token
+    if (token) {
+      authStore.setToken(token) // บันทึก token ลงใน store/localStorage
+      router.push('/') // เปลี่ยน route
     }
-  },
-  methods: {
-    handleLogin() {
-      console.log('Email:', this.email)
-      console.log('Password:', this.password)
-      // Add login logic here
-    }
+  } catch (error) {
+    alert('Invalid email or password')
+    console.error(error)
   }
 }
 </script>
@@ -31,10 +41,9 @@ export default {
       <button type="submit" class="w-full p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">Login</button>
     </form>
 
-    <!-- Link to Register Page -->
     <div class="mt-4 text-center">
       <p class="text-sm text-gray-600">
-        Don't have an account? 
+        Don't have an account?
         <router-link to="/register" class="text-blue-500 hover:underline">Create one</router-link>
       </p>
     </div>
@@ -43,6 +52,6 @@ export default {
 
 <style scoped>
 .login-form {
-  /* สามารถปรับสไตล์เพิ่มเติมได้ */
+  /* เพิ่มเติมได้ */
 }
 </style>

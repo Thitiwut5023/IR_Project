@@ -4,6 +4,8 @@ import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
 import FoodDetailView from '@/views/FoodDetailView.vue'
 import BookmarksView from '@/views/BookmarksView.vue'
+import { useAuthStore } from '@/stores/auth'
+import ProfileView from '@/views/ProfileView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -16,24 +18,43 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: LoginView,  // เพิ่มเส้นทางไปที่ LoginView
+      component: LoginView,
     },
     {
       path: '/register',
       name: 'register',
-      component: RegisterView,  // เพิ่มเส้นทางไปที่ RegisterView
+      component: RegisterView,
     },
     {
       path: '/food/:name',
       name: 'food-detail',
-      component: FoodDetailView, // หน้าแสดงรายละเอียดอาหาร
+      component: FoodDetailView,
     },
     {
-      path: '/bookmarks',  // เพิ่มเส้นทางใหม่สำหรับหน้า bookmark
+      path: '/bookmarks',
       name: 'bookmarks-view',
-      component: BookmarksView
+      component: BookmarksView,
+      meta: { requiresAuth: true } // ⬅️ ต้อง login ก่อน
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: ProfileView,
+      meta: { requiresAuth: true } // ต้อง login ก่อน
     },
   ],
+})
+
+// ⬇️ Navigation Guard เพื่อป้องกัน route ที่ต้อง login
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore()
+  const isAuthenticated = authStore.isAuthenticated
+
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    next('/login') // redirect ไป login ถ้ายังไม่ได้ login
+  } else {
+    next()
+  }
 })
 
 export default router
