@@ -1,52 +1,38 @@
 <script setup>
-import { RouterLink } from 'vue-router';
-import SearchBox from '@/components/SearchBox.vue';
+import { ref, onMounted } from 'vue';
+import { Search } from 'lucide-vue-next';  // ใช้ไอคอน Search จาก lucide
 import Card from '@/components/Card.vue';
 
-const items = [
-  {
-    name: 'neapolitan-pizza-with-fresh-basil',
-    image: 'https://via.placeholder.com/400x300',
-    title: 'Neapolitan Pizza with Fresh Basil',
-    description: 'Delicious pizza with fresh basil and mozzarella cheese.',
-    category: 'Italian'
-  },
-  {
-    name: 'healthy-vegetable-salad-bowl',
-    image: 'https://via.placeholder.com/400x300',
-    title: 'Healthy Vegetable Salad Bowl',
-    description: 'A healthy vegetable salad with fresh ingredients.',
-    category: 'Healthy'
-  },
-  {
-    name: 'pancakes-with-berries-and-maple-syrup',
-    image: 'https://via.placeholder.com/400x300',
-    title: 'Pancakes with Berries and Maple Syrup',
-    description: 'Fluffy pancakes topped with fresh berries and syrup.',
-    category: 'Breakfast'
-  },
-  {
-    name: 'spaghetti-carbonara',
-    image: 'https://via.placeholder.com/400x300',
-    title: 'Spaghetti Carbonara',
-    description: 'Classic Italian pasta with creamy sauce and pancetta.',
-    category: 'Italian'
-  },
-  {
-    name: 'vegan-buddha-bowl',
-    image: 'https://via.placeholder.com/400x300',
-    title: 'Vegan Buddha Bowl',
-    description: 'A colorful and healthy bowl with quinoa, veggies, and hummus.',
-    category: 'Vegan'
-  },
-  {
-    name: 'french-toast-with-berries',
-    image: 'https://via.placeholder.com/400x300',
-    title: 'French Toast with Berries',
-    description: 'Crispy French toast served with fresh berries and syrup.',
-    category: 'Breakfast'
+const items = ref([]);
+const loading = ref(true);
+const searchQuery = ref("pasta");  // คำค้นหาจากช่อง input
+
+// ฟังก์ชันดึงข้อมูลจาก API
+const fetchData = async (query = "") => {
+  try {
+    const response = await fetch(`http://localhost:5000/api/search?query=${query}`);  // ส่งค่า query ไปใน URL
+    const data = await response.json();
+    items.value = data;  // ใช้ข้อมูลจาก API มาฝากใน items
+    loading.value = false;
+    console.log("data",data)
+    console.log(items)
+
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    loading.value = false;
+    console.log(items)
   }
-];
+};
+
+// เรียกใช้เมื่อ component ถูก mount
+onMounted(() => {
+  fetchData(searchQuery.value);
+});
+
+// ฟังก์ชันสำหรับการค้นหา
+const handleSearch = () => {
+  fetchData(searchQuery.value);  // ส่งคำค้นหาที่พิมพ์
+};
 </script>
 
 <template>
@@ -60,30 +46,32 @@ const items = [
         Discover recipes, save your favorites, and get inspired for your next kitchen adventure.
       </p>
 
-      <!-- Use SearchBox Component -->
-      <SearchBox />
-
-      <!-- Browse Categories -->
-      <h3 class="text-xl text-gray-800 font-semibold mb-4">Browse by Category</h3>
-      <div class="flex flex-wrap justify-center gap-4 mb-8">
-        <button class="bg-gray-100 text-gray-800 px-6 py-2 rounded-full text-sm font-medium hover:bg-gray-200">Quick Dinner</button>
-        <button class="bg-gray-100 text-gray-800 px-6 py-2 rounded-full text-sm font-medium hover:bg-gray-200">Vegetarian</button>
-        <button class="bg-gray-100 text-gray-800 px-6 py-2 rounded-full text-sm font-medium hover:bg-gray-200">Desserts</button>
-        <button class="bg-gray-100 text-gray-800 px-6 py-2 rounded-full text-sm font-medium hover:bg-gray-200">Gluten Free</button>
+      <!-- Search Box with Search Icon -->
+      <div class="relative mb-8">
+        <input 
+          v-model="searchQuery"
+          @input="handleSearch"
+          type="search"
+          placeholder="Search for menu or recipes..."
+          class="w-full max-w-xl p-4 pl-12 pr-6 rounded-full bg-white border border-gray-300 shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+        <Search class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500" />
       </div>
 
       <!-- Card Container with 4 columns -->
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 w-full">
+        <!-- Check if data is loading -->
+        <div v-if="loading" class="w-full text-center">Loading...</div>
+
+        <!-- Loop through the items and display them -->
         <div v-for="(item, index) in items" :key="index" class="w-full">
-          <!-- RouterLink ครอบแค่รูปภาพและชื่ออาหาร -->
-          <div :to="`/food/${item.name}`">
+          <RouterLink :to="`/food/${item.Name}`">
             <Card 
               :image="item.image" 
-              :title="item.title" 
+              :title="item.name" 
               :description="item.description" 
-              :category="item.category"
             />
-          </div>
+          </RouterLink>
         </div>
       </div>
     </div>

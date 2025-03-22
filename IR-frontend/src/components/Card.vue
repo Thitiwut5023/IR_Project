@@ -6,10 +6,10 @@ const props = defineProps({
   image: String,
   title: String,
   description: String,
-  category: String
 });
 
-const slug = props.title.replace(/\s+/g, '-').toLowerCase();
+// สร้าง slug สำหรับ URL
+const slug = props.title;
 </script>
 
 <template>
@@ -31,7 +31,6 @@ const slug = props.title.replace(/\s+/g, '-').toLowerCase();
         :title="props.title"
         :image="props.image"
         :description="props.description"
-        :category="props.category"
       />
     </div>
   </div>

@@ -7,7 +7,6 @@ const props = defineProps({
   title: String,      // ชื่ออาหาร
   image: String,      // รูปภาพของอาหาร
   description: String,// คำบรรยายของอาหาร
-  category: String    // หมวดหมู่ของอาหาร
 });
 
 // สร้าง state สำหรับเก็บสถานะของ bookmark
