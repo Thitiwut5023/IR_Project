@@ -19,6 +19,7 @@ const isLoading = ref(false);
 const errorMessage = ref('');
 const showMoveDialog = ref(false); // State for showing the modal
 const currentFolderId = ref(null);
+const rating = ref(0);
 
 // Watch authentication state and reload bookmark status if it changes
 watch(() => authStore.isAuthenticated, (isAuthenticated) => {
@@ -27,6 +28,7 @@ watch(() => authStore.isAuthenticated, (isAuthenticated) => {
   } else if (!isAuthenticated) {
     isBookmarked.value = false;
     currentFolderId.value = null;
+    rating.value = 0; // Reset rating
   }
 });
 
@@ -43,6 +45,7 @@ const loadBookmarkState = async () => {
     const response = await bookmarkService.checkBookmark(props.slug);
     isBookmarked.value = response.is_bookmarked;
     currentFolderId.value = response.folder_id || null;
+    rating.value = response.rating || 0; // Set the rating value
   } catch (error) {
     console.error('Error checking bookmark status:', error);
     errorMessage.value = 'Could not check bookmark status';
@@ -74,6 +77,7 @@ const toggleBookmark = async () => {
       await bookmarkService.removeBookmark(props.slug);
       isBookmarked.value = false;
       currentFolderId.value = null;
+      rating.value = 0; // Reset rating
     } else {
       await bookmarkService.addBookmark(props.slug);
       isBookmarked.value = true;
@@ -102,6 +106,16 @@ const handleMove = async ({ bookmarkId, folderId }) => {
     errorMessage.value = 'Failed to move bookmark';
   } finally {
     isLoading.value = false;
+  }
+};
+
+// Rate bookmark
+const rateBookmark = async (newRating) => {
+  try {
+    await bookmarkService.rateBookmark(props.slug, newRating); // Pass recipe_id (slug)
+    rating.value = newRating;
+  } catch (error) {
+    console.error('Error rating bookmark:', error);
   }
 };
 
@@ -141,6 +155,21 @@ onMounted(() => {
       @close="showMoveDialog = false"
       @move="handleMove"
     />
+    
+    <div v-if="isBookmarked" class="mt-2">
+      <span class="mr-2">Rate:</span>
+      <div class="inline-flex">
+        <button 
+          v-for="star in 5" 
+          :key="star" 
+          @click="rateBookmark(star)"
+          class="text-xl px-1 focus:outline-none"
+          :class="star <= rating ? 'text-yellow-500' : 'text-gray-300'"
+        >
+          ★
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -151,5 +180,13 @@ button:hover:not(:disabled) {
 button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.text-yellow-500 {
+  color: #f59e0b;
+}
+
+.text-gray-300 {
+  color: #d1d5db;
 }
 </style>

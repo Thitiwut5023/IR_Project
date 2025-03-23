@@ -104,6 +104,17 @@ export const bookmarkService = {
       console.error('Error checking bookmark status:', error);
       return { is_bookmarked: false };
     }
+  },
+
+  // Rate a bookmark
+  rateBookmark: async (recipeId: string, rating: number) => {
+    try {
+      const response = await api.put(`/bookmarks/${recipeId}/rate`, { rating });
+      return response.data;
+    } catch (error) {
+      console.error('Error rating bookmark:', error);
+      throw error;
+    }
   }
 };
 
@@ -165,6 +176,17 @@ export const folderService = {
       return response.data;
     } catch (error) {
       console.error('Error moving bookmark:', error);
+      throw error;
+    }
+  },
+
+  // Get ranked folders
+  getRankedFolders: async () => {
+    try {
+      const response = await api.get('/folders/rank');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching ranked folders:', error);
       throw error;
     }
   }

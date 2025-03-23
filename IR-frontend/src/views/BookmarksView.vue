@@ -241,6 +241,24 @@ onMounted(() => {
     loadBookmarks();
   }
 });
+
+const rankedFolders = ref([]);
+const loadingRankings = ref(false);
+
+const loadRankedFolders = async () => {
+  try {
+    loadingRankings.value = true;
+    rankedFolders.value = await folderService.getRankedFolders();
+  } catch (error) {
+    console.error('Error loading ranked folders:', error);
+  } finally {
+    loadingRankings.value = false;
+  }
+};
+
+onMounted(() => {
+  loadRankedFolders();
+});
 </script>
 
 <template>
@@ -428,6 +446,16 @@ onMounted(() => {
     @close="moveDialogOpen = false"
     @move="handleBookmarkMove"
   />
+
+  <div class="mt-8">
+    <h3 class="text-xl font-semibold mb-4">Folder Rankings</h3>
+    <div v-if="loadingRankings" class="text-center">Loading rankings...</div>
+    <ul v-else>
+      <li v-for="folder in rankedFolders" :key="folder.id" class="mb-2">
+        <span class="font-bold">{{ folder.name }}</span> - Total Score: {{ folder.total_score }}
+      </li>
+    </ul>
+  </div>
 </template>
 
 <style scoped>
