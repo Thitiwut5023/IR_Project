@@ -2,9 +2,48 @@
 import { Search, Heart, User } from 'lucide-vue-next'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { ref, inject, watch } from 'vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
+const searchInput = ref('')
+
+// Try to inject searchQuery if it exists (provided by HomeView)
+const externalSearchQuery = inject('searchQuery', null)
+
+// Function to handle quick category searches
+const handleCategorySearch = (category: string) => {
+  if (externalSearchQuery) {
+    // If we have the injected ref, update its value directly
+    externalSearchQuery.value = category
+  } else {
+    // Otherwise navigate to home with a query parameter
+    router.push({ 
+      path: '/', 
+      query: { search: category } 
+    })
+  }
+}
+
+// Watch for changes from the HomeView and update our local input
+watch(() => externalSearchQuery?.value, (newValue) => {
+  if (newValue !== undefined && newValue !== null) {
+    searchInput.value = newValue
+  }
+}, { immediate: true })
+
+const handleSearch = () => {
+  if (externalSearchQuery) {
+    // Update the injected ref
+    externalSearchQuery.value = searchInput.value
+  } else {
+    // Or navigate with query
+    router.push({ 
+      path: '/', 
+      query: { search: searchInput.value } 
+    })
+  }
+}
 
 const handleLogout = () => {
   authStore.logout()
@@ -25,19 +64,34 @@ const handleLogout = () => {
 
         <!-- Desktop Categories -->
         <div class="hidden md:flex space-x-4 items-center animate-slide-down">
-          <button class="food-category-pill text-sm font-medium bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full px-4 py-2">
+          <button 
+            @click="handleCategorySearch('all')" 
+            class="food-category-pill text-sm font-medium bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full px-4 py-2 transition-colors"
+          >
             All
           </button>
-          <button class="food-category-pill text-sm font-medium bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full px-4 py-2">
+          <button 
+            @click="handleCategorySearch('breakfast')" 
+            class="food-category-pill text-sm font-medium bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full px-4 py-2 transition-colors"
+          >
             Breakfast
           </button>
-          <button class="food-category-pill text-sm font-medium bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full px-4 py-2">
+          <button 
+            @click="handleCategorySearch('lunch')" 
+            class="food-category-pill text-sm font-medium bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full px-4 py-2 transition-colors"
+          >
             Lunch
           </button>
-          <button class="food-category-pill text-sm font-medium bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full px-4 py-2">
+          <button 
+            @click="handleCategorySearch('dinner')" 
+            class="food-category-pill text-sm font-medium bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full px-4 py-2 transition-colors"
+          >
             Dinner
           </button>
-          <button class="food-category-pill text-sm font-medium bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full px-4 py-2">
+          <button 
+            @click="handleCategorySearch('dessert')" 
+            class="food-category-pill text-sm font-medium bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full px-4 py-2 transition-colors"
+          >
             Desserts
           </button>
         </div>
@@ -48,6 +102,8 @@ const handleLogout = () => {
           <div class="relative hidden sm:block">
             <Search class="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
             <input
+              v-model="searchInput"
+              @keyup.enter="handleSearch"
               type="search"
               placeholder="Search recipes..."
               class="pl-9 pr-4 h-9 w-[180px] md:w-[220px] rounded-full border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"

@@ -1,11 +1,16 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, provide, watch } from 'vue';
 import { Search } from 'lucide-vue-next';
+import { useRoute } from 'vue-router';
 import Card from '@/components/Card.vue';
 
+const route = useRoute();
 const items = ref([]);
 const loading = ref(true);
-const searchQuery = ref("pasta");
+const searchQuery = ref(route.query.search || "pasta");
+
+// Provide searchQuery to be used by Navbar
+provide('searchQuery', searchQuery);
 
 // ฟังก์ชันดึงข้อมูลจาก API
 const fetchData = async (query = "") => {
@@ -33,6 +38,21 @@ const fetchData = async (query = "") => {
     loading.value = false;
   }
 };
+
+// Watch for changes in route query params
+watch(() => route.query.search, (newQuery) => {
+  if (newQuery) {
+    searchQuery.value = newQuery;
+    fetchData(newQuery);
+  }
+});
+
+// Watch for changes in searchQuery
+watch(searchQuery, (newQuery) => {
+  if (newQuery) {
+    fetchData(newQuery);
+  }
+}, { immediate: false });
 
 // เรียกใช้เมื่อ component ถูก mount
 onMounted(() => {
