@@ -1,7 +1,12 @@
 import axios from 'axios';
 
-// Create a base axios instance
+// Create a base axios instance for authenticated requests
 const api = axios.create({
+  baseURL: 'http://localhost:5000/api'
+});
+
+// Create a public API instance without auth requirements
+export const publicApi = axios.create({
   baseURL: 'http://localhost:5000/api'
 });
 
@@ -68,9 +73,14 @@ export const bookmarkService = {
     }
   },
   
-  // Check if a recipe is bookmarked
+  // Check if a recipe is bookmarked - handle gracefully when not logged in
   checkBookmark: async (recipeId: string) => {
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        return false; // Not bookmarked if not logged in
+      }
+      
       const response = await api.get(`/bookmarks/check/${recipeId}`);
       return response.data.is_bookmarked;
     } catch (error) {
@@ -81,6 +91,29 @@ export const bookmarkService = {
       }
       console.error('Error checking bookmark status:', error);
       return false;
+    }
+  }
+};
+
+// Food search and detail API calls that don't require authentication
+export const foodService = {
+  search: async (query: string) => {
+    try {
+      const response = await publicApi.get(`/search?query=${encodeURIComponent(query)}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error searching recipes:', error);
+      throw error;
+    }
+  },
+  
+  getDetail: async (id: string) => {
+    try {
+      const response = await publicApi.get(`/food/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching recipe details:', error);
+      throw error;
     }
   }
 };

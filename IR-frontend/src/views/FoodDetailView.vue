@@ -2,15 +2,14 @@
 import { ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import BookmarkButton from '@/components/BookmarkButton.vue';
-import api from '@/services/api';
-
-const route = useRoute();
-const foodSlug = ref(route.params.name); // Convert to ref to allow reactivity
 
 // State to hold food details and loading status
 const foodDetails = ref(null);
 const loading = ref(true);
 const error = ref(null); 
+
+const route = useRoute();
+const foodSlug = ref(route.params.name); // Convert to ref to allow reactivity
 
 // Fetch food details from API
 const fetchFoodDetails = async () => {
@@ -20,8 +19,12 @@ const fetchFoodDetails = async () => {
   foodDetails.value = null;
   
   try {
-    const response = await api.get(`/food/${foodSlug.value}`);
-    foodDetails.value = response.data;
+    // Use fetch for public endpoints instead of our authenticated api service
+    const response = await fetch(`http://localhost:5000/api/food/${foodSlug.value}`);
+    if (!response.ok) {
+      throw new Error(`API responded with status ${response.status}`);
+    }
+    foodDetails.value = await response.json();
   } catch (err) {
     console.error('Error fetching food details:', err);
     error.value = 'Error fetching food details, please try again later.';

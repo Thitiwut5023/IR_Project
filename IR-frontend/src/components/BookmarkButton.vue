@@ -59,6 +59,11 @@ const toggleBookmark = async (event) => {
   
   // Redirect to login if not authenticated
   if (!authStore.isAuthenticated) {
+    // Store the current path to redirect back after login
+    localStorage.setItem('bookmarkAfterLogin', JSON.stringify({
+      slug: props.slug,
+      action: 'add'
+    }));
     router.push('/login');
     return;
   }

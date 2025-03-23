@@ -1,10 +1,13 @@
 <script setup>
 import { ref, onMounted, provide, watch } from 'vue';
 import { Search } from 'lucide-vue-next';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import Card from '@/components/Card.vue';
+import { useAuthStore } from '@/stores/auth';
 
 const route = useRoute();
+const router = useRouter();
+const authStore = useAuthStore();
 const items = ref([]);
 const loading = ref(true);
 const searchQuery = ref(route.query.search || "pasta");
@@ -18,8 +21,10 @@ const fetchData = async (query = "") => {
   loading.value = true;
   
   try {
-    console.log("Fetching data for query:", query);
-    const response = await fetch(`http://localhost:5000/api/search?query=${encodeURIComponent(query)}`);
+    console.log(`Fetching data for query: "${query}"`);
+    const response = await fetch(
+      `http://localhost:5000/api/search?query=${encodeURIComponent(query)}`
+    );
     
     if (!response.ok) {
       throw new Error(`API responded with status ${response.status}`);
@@ -40,30 +45,26 @@ const fetchData = async (query = "") => {
 };
 
 // Watch for changes in route query params
-watch(() => route.query.search, (newQuery) => {
-  if (newQuery) {
-    searchQuery.value = newQuery;
-    fetchData(newQuery);
+watch(() => route.query, (newQuery) => {
+  if (newQuery.search) {
+    searchQuery.value = newQuery.search;
+    fetchData(searchQuery.value);
   }
-});
-
-// Watch for changes in searchQuery
-watch(searchQuery, (newQuery) => {
-  if (newQuery) {
-    fetchData(newQuery);
-  }
-}, { immediate: false });
-
-// เรียกใช้เมื่อ component ถูก mount
-onMounted(() => {
-  fetchData(searchQuery.value);
-});
+}, { deep: true });
 
 // ฟังก์ชันสำหรับการค้นหา
 const handleSearch = () => {
   console.log("Search triggered for:", searchQuery.value);
   // Don't trigger search if query is empty
   if (searchQuery.value.trim() !== "") {
+    // Update URL to reflect the search
+    router.push({ 
+      path: '/', 
+      query: { 
+        search: searchQuery.value
+      }
+    });
+    
     fetchData(searchQuery.value);
   }
 };
@@ -74,8 +75,13 @@ const handleSearchInput = () => {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
     handleSearch();
-  }, 300); // 300ms delay
+  }, 500); // 500ms delay
 };
+
+// เรียกใช้เมื่อ component ถูก mount
+onMounted(() => {
+  fetchData(searchQuery.value);
+});
 </script>
 
 <template>
@@ -89,17 +95,19 @@ const handleSearchInput = () => {
         Discover recipes, save your favorites, and get inspired for your next kitchen adventure.
       </p>
 
-      <!-- Search Box with Search Icon -->
-      <div class="relative mb-8">
-        <input 
-          v-model="searchQuery"
-          @input="handleSearchInput"
-          @keyup.enter="handleSearch"
-          type="search"
-          placeholder="Search for menu or recipes..."
-          class="w-full max-w-xl p-4 pl-12 pr-6 rounded-full bg-white border border-gray-300 shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-        <Search class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500" />
+      <!-- Simple Search Box with Search Icon -->
+      <div class="relative mb-8 max-w-2xl mx-auto">
+        <div class="relative flex-1">
+          <input 
+            v-model="searchQuery"
+            @input="handleSearchInput"
+            @keyup.enter="handleSearch"
+            type="search"
+            placeholder="Search for recipes, ingredients, or cooking methods..."
+            class="w-full p-4 pl-12 pr-6 rounded-full bg-white border border-gray-300 shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+          <Search class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500" />
+        </div>
       </div>
 
       <!-- Card Container with 4 columns -->
@@ -113,6 +121,7 @@ const handleSearchInput = () => {
         <!-- No results message -->
         <div v-else-if="items.length === 0" class="col-span-full text-center py-8">
           <p class="text-lg text-gray-600">No results found for "{{ searchQuery }}"</p>
+          <p class="text-sm text-gray-500 mt-2">Try using different keywords or check for spelling.</p>
         </div>
 
         <!-- Loop through the items and display them -->
@@ -121,15 +130,10 @@ const handleSearchInput = () => {
             :id="item._id || item.id"
             :image="item.Images || item.image" 
             :title="item.Name || item.name" 
-            :description="item.Description || item.description" 
+            :description="item.Description || item.description"
+            :category="item.category || item.RecipeCategory" 
           />
         </div>
-      </div>
-
-      <!-- Debug section (can be removed in production) -->
-      <div v-if="false" class="mt-8 p-4 bg-gray-100 rounded-lg text-left">
-        <h3 class="font-bold">Debug Info:</h3>
-        <pre class="text-xs overflow-auto">{{ items }}</pre>
       </div>
     </div>
   </div>

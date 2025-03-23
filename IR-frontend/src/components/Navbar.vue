@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { Search, Heart, User } from 'lucide-vue-next'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ref, inject, watch } from 'vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 const searchInput = ref('')
 
 // Try to inject searchQuery if it exists (provided by HomeView)
@@ -20,7 +21,9 @@ const handleCategorySearch = (category: string) => {
     // Otherwise navigate to home with a query parameter
     router.push({ 
       path: '/', 
-      query: { search: category } 
+      query: { 
+        search: category
+      }
     })
   }
 }
@@ -40,7 +43,9 @@ const handleSearch = () => {
     // Or navigate with query
     router.push({ 
       path: '/', 
-      query: { search: searchInput.value } 
+      query: { 
+        search: searchInput.value
+      }
     })
   }
 }

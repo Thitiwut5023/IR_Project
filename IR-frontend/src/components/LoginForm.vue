@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
+import { bookmarkService } from '@/services/api'
 
 const email = ref('')
 const password = ref('')
@@ -10,6 +11,23 @@ const error = ref('')
 const loading = ref(false)
 const router = useRouter()
 const authStore = useAuthStore()
+
+// Check if we need to bookmark something after login
+const bookmarkAfterLoginData = ref(null)
+
+onMounted(() => {
+  // Check if there's stored bookmark action
+  const storedAction = localStorage.getItem('bookmarkAfterLogin')
+  if (storedAction) {
+    try {
+      bookmarkAfterLoginData.value = JSON.parse(storedAction)
+      console.log('Will bookmark after login:', bookmarkAfterLoginData.value)
+    } catch (e) {
+      console.error('Error parsing bookmark data:', e)
+      localStorage.removeItem('bookmarkAfterLogin')
+    }
+  }
+})
 
 const handleLogin = async () => {
   error.value = ''
@@ -25,7 +43,26 @@ const handleLogin = async () => {
     if (token) {
       console.log('Login successful, token received');
       authStore.setToken(token) // This will also save to localStorage
-      router.push('/')
+      
+      // Check if we need to bookmark something after login
+      if (bookmarkAfterLoginData.value?.slug) {
+        try {
+          await bookmarkService.addBookmark(bookmarkAfterLoginData.value.slug)
+          console.log('Bookmarked item after login')
+          
+          // Clear the stored action
+          localStorage.removeItem('bookmarkAfterLogin')
+          
+          // Redirect to the food detail page
+          router.push(`/food/${bookmarkAfterLoginData.value.slug}`)
+        } catch (bookmarkError) {
+          console.error('Error bookmarking after login:', bookmarkError)
+          // Still redirect to home even if bookmark fails
+          router.push('/')
+        }
+      } else {
+        router.push('/')
+      }
     } else {
       console.error('No token in response', response.data);
       error.value = 'Authentication failed. Server did not return a token.'
