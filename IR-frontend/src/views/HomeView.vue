@@ -1,26 +1,36 @@
 <script setup>
 import { ref, onMounted } from 'vue';
-import { Search } from 'lucide-vue-next';  // ใช้ไอคอน Search จาก lucide
+import { Search } from 'lucide-vue-next';
 import Card from '@/components/Card.vue';
 
 const items = ref([]);
 const loading = ref(true);
-const searchQuery = ref("pasta");  // คำค้นหาจากช่อง input
+const searchQuery = ref("pasta");
 
 // ฟังก์ชันดึงข้อมูลจาก API
 const fetchData = async (query = "") => {
+  // Set loading to true to show loading indicator
+  loading.value = true;
+  
   try {
-    const response = await fetch(`http://localhost:5000/api/search?query=${query}`);  // ส่งค่า query ไปใน URL
+    console.log("Fetching data for query:", query);
+    const response = await fetch(`http://localhost:5000/api/search?query=${encodeURIComponent(query)}`);
+    
+    if (!response.ok) {
+      throw new Error(`API responded with status ${response.status}`);
+    }
+    
     const data = await response.json();
-    items.value = data;  // ใช้ข้อมูลจาก API มาฝากใน items
-    loading.value = false;
-    console.log("data",data)
-    console.log(items)
-
+    console.log("Search results:", data);
+    
+    // Clear previous results and populate with new data
+    items.value = data;
+    
   } catch (error) {
     console.error('Error fetching data:', error);
+    items.value = []; // Clear items on error
+  } finally {
     loading.value = false;
-    console.log(items)
   }
 };
 
@@ -31,7 +41,20 @@ onMounted(() => {
 
 // ฟังก์ชันสำหรับการค้นหา
 const handleSearch = () => {
-  fetchData(searchQuery.value);  // ส่งคำค้นหาที่พิมพ์
+  console.log("Search triggered for:", searchQuery.value);
+  // Don't trigger search if query is empty
+  if (searchQuery.value.trim() !== "") {
+    fetchData(searchQuery.value);
+  }
+};
+
+// Throttled search handler to prevent too many API calls during typing
+let searchTimeout;
+const handleSearchInput = () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    handleSearch();
+  }, 300); // 300ms delay
 };
 </script>
 
@@ -50,7 +73,8 @@ const handleSearch = () => {
       <div class="relative mb-8">
         <input 
           v-model="searchQuery"
-          @input="handleSearch"
+          @input="handleSearchInput"
+          @keyup.enter="handleSearch"
           type="search"
           placeholder="Search for menu or recipes..."
           class="w-full max-w-xl p-4 pl-12 pr-6 rounded-full bg-white border border-gray-300 shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -61,18 +85,31 @@ const handleSearch = () => {
       <!-- Card Container with 4 columns -->
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 w-full">
         <!-- Check if data is loading -->
-        <div v-if="loading" class="w-full text-center">Loading...</div>
+        <div v-if="loading" class="col-span-full text-center py-8">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+          <p class="mt-2">Loading results...</p>
+        </div>
+
+        <!-- No results message -->
+        <div v-else-if="items.length === 0" class="col-span-full text-center py-8">
+          <p class="text-lg text-gray-600">No results found for "{{ searchQuery }}"</p>
+        </div>
 
         <!-- Loop through the items and display them -->
-        <div v-for="(item, index) in items" :key="index" class="w-full">
-          <RouterLink :to="`/food/${item.Name}`">
-            <Card 
-              :image="item.image" 
-              :title="item.name" 
-              :description="item.description" 
-            />
-          </RouterLink>
+        <div v-else v-for="(item, index) in items" :key="`${index}-${item._id || item.id}`" class="w-full">
+          <Card 
+            :id="item._id || item.id"
+            :image="item.Images || item.image" 
+            :title="item.Name || item.name" 
+            :description="item.Description || item.description" 
+          />
         </div>
+      </div>
+
+      <!-- Debug section (can be removed in production) -->
+      <div v-if="false" class="mt-8 p-4 bg-gray-100 rounded-lg text-left">
+        <h3 class="font-bold">Debug Info:</h3>
+        <pre class="text-xs overflow-auto">{{ items }}</pre>
       </div>
     </div>
   </div>

@@ -6,10 +6,12 @@ const props = defineProps({
   image: String,
   title: String,
   description: String,
+  id: String, // Add id prop to receive the food id
+  category: String,
 });
 
-// สร้าง slug สำหรับ URL
-const slug = props.title;
+// ใช้ id หรือ title เป็น slug
+const slug = props.id || props.title;
 </script>
 
 <template>
