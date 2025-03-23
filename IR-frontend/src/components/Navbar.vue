@@ -2,7 +2,7 @@
 import { Search, Heart, User } from 'lucide-vue-next'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { ref, inject, watch, type Ref } from 'vue'
+import { ref, inject, watch } from 'vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -10,13 +10,22 @@ const route = useRoute()
 const searchInput = ref('')
 
 // Try to inject searchQuery if it exists (provided by HomeView)
-const externalSearchQuery = inject<Ref<string | null>>('searchQuery', ref(null))
+const externalSearchQuery = inject('searchQuery', ref(''))
 
 // Function to handle quick category searches
 const handleCategorySearch = (category: string) => {
-  if (externalSearchQuery) {
+  console.log("Quick search triggered:", category);
+  
+  if (externalSearchQuery && typeof externalSearchQuery === 'object' && 'value' in externalSearchQuery) {
     // If we have the injected ref, update its value directly
-    externalSearchQuery.value = category
+    externalSearchQuery.value = category;
+    // Navigate to home to ensure the search is performed
+    router.push({ 
+      path: '/', 
+      query: { 
+        search: category
+      }
+    });
   } else {
     // Otherwise navigate to home with a query parameter
     router.push({ 
@@ -24,23 +33,32 @@ const handleCategorySearch = (category: string) => {
       query: { 
         search: category
       }
-    })
+    });
   }
 }
 
 // Watch for changes from the HomeView and update our local input
-watch(() => externalSearchQuery?.value, (newValue) => {
-  if (newValue !== undefined && newValue !== null) {
-    searchInput.value = newValue
+watch(() => externalSearchQuery, (newValue) => {
+  if (newValue && typeof newValue === 'object' && 'value' in newValue && newValue.value) {
+    searchInput.value = newValue.value;
   }
-}, { immediate: true })
+}, { immediate: true, deep: true });
 
 const handleSearch = () => {
   if (searchInput.value.trim() === '') return;
   
-  if (externalSearchQuery) {
+  console.log("Search triggered from navbar:", searchInput.value);
+  
+  if (externalSearchQuery && typeof externalSearchQuery === 'object' && 'value' in externalSearchQuery) {
     // Update the injected ref
-    externalSearchQuery.value = searchInput.value
+    externalSearchQuery.value = searchInput.value;
+    // Navigate to home to ensure the search is performed
+    router.push({ 
+      path: '/', 
+      query: { 
+        search: searchInput.value
+      }
+    });
   } else {
     // Or navigate with query
     router.push({ 
@@ -48,7 +66,7 @@ const handleSearch = () => {
       query: { 
         search: searchInput.value
       }
-    })
+    });
   }
 }
 
@@ -108,13 +126,14 @@ const handleLogout = () => {
           <!-- Search Box -->
           <div class="relative hidden sm:block">
             <Search class="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
-            <input
-              v-model="searchInput"
-              @keyup.enter="handleSearch"
-              type="search"
-              placeholder="Search recipes..."
-              class="pl-9 pr-4 h-9 w-[180px] md:w-[220px] rounded-full border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
+            <form @submit.prevent="handleSearch">
+              <input
+                v-model="searchInput"
+                type="search"
+                placeholder="Search recipes..."
+                class="pl-9 pr-4 h-9 w-[180px] md:w-[220px] rounded-full border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            </form>
           </div>
 
           <!-- Right-side buttons -->

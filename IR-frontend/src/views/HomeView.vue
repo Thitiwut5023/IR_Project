@@ -49,8 +49,12 @@ watch(() => route.query, (newQuery) => {
   if (newQuery.search) {
     searchQuery.value = newQuery.search;
     fetchData(searchQuery.value);
+  } else if (route.path === '/') {
+    // If on home page with no search query, load default results
+    searchQuery.value = "pasta";
+    fetchData(searchQuery.value);
   }
-}, { deep: true });
+}, { deep: true, immediate: true });
 
 // ฟังก์ชันสำหรับการค้นหา
 const handleSearch = () => {
