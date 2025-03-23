@@ -18,6 +18,7 @@ const uncategorizedCount = ref(0);
 const loading = ref(false);
 const error = ref(null);
 const currentFolderId = ref(null);
+const sortOrder = ref('default'); // Add sort order state: 'default', 'highToLow', 'lowToHigh'
 
 // Dialog states
 const folderDialogOpen = ref(false);
@@ -48,15 +49,45 @@ watch(() => authStore.isAuthenticated, (isAuthenticated) => {
   }
 });
 
-// Function to load folders from API
+// Function to load folders from API with rating information
 const loadFolders = async () => {
   if (!authStore.isAuthenticated) return;
   
   try {
     loading.value = true;
-    const response = await folderService.getFolders();
-    folders.value = response.folders || [];
-    uncategorizedCount.value = response.uncategorized_count || 0;
+    const [foldersResponse, rankingsResponse] = await Promise.all([
+      folderService.getFolders(),
+      folderService.getRankedFolders()
+    ]);
+    
+    // Get the basic folder information
+    const folderList = foldersResponse.folders || [];
+    uncategorizedCount.value = foldersResponse.uncategorized_count || 0;
+    
+    // Process ranking data to add average scores to folders
+    const rankingData = {};
+    rankingsResponse.forEach(folder => {
+      const bookmarkCount = folder.bookmark_count || 1;
+      const totalScore = folder.total_score || 0;
+      const avgScore = bookmarkCount > 0 ? Math.min(5, totalScore / bookmarkCount) : 0;
+      
+      rankingData[folder.id] = {
+        totalScore,
+        bookmarkCount,
+        averageScore: avgScore
+      };
+    });
+    
+    // Merge folder data with ranking data
+    folders.value = folderList.map(folder => ({
+      ...folder,
+      totalScore: rankingData[folder.id]?.totalScore || 0,
+      averageScore: rankingData[folder.id]?.averageScore || 0
+    }));
+    
+    // Apply sort based on current sortOrder
+    applySorting();
+    
   } catch (err) {
     console.error('Error loading folders:', err);
     // Handle authentication error
@@ -103,6 +134,28 @@ const loadBookmarks = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+// Function to sort folders based on sortOrder
+const applySorting = () => {
+  switch (sortOrder.value) {
+    case 'highToLow':
+      folders.value.sort((a, b) => b.averageScore - a.averageScore);
+      break;
+    case 'lowToHigh':
+      folders.value.sort((a, b) => a.averageScore - b.averageScore);
+      break;
+    default:
+      // Default sorting (by name)
+      folders.value.sort((a, b) => a.name.localeCompare(b.name));
+      break;
+  }
+};
+
+// Function to change sort order
+const changeSortOrder = (order) => {
+  sortOrder.value = order;
+  applySorting();
 };
 
 // Change current folder
@@ -281,7 +334,7 @@ const loadRankedFolders = async () => {
   }
 };
 
-// Make sure we load folders first, then ranked folders
+// Make sure we load all necessary data
 onMounted(async () => {
   if (authStore.isAuthenticated) {
     await loadFolders();
@@ -311,6 +364,31 @@ onMounted(async () => {
             </button>
           </div>
           
+          <!-- Folder Sort Controls -->
+          <div class="mb-4 flex flex-wrap gap-2">
+            <button 
+              @click="changeSortOrder('default')" 
+              class="text-xs px-3 py-1 rounded-full"
+              :class="sortOrder === 'default' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
+            >
+              A-Z
+            </button>
+            <button 
+              @click="changeSortOrder('highToLow')" 
+              class="text-xs px-3 py-1 rounded-full"
+              :class="sortOrder === 'highToLow' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
+            >
+              Rating ★★★ to ★
+            </button>
+            <button 
+              @click="changeSortOrder('lowToHigh')" 
+              class="text-xs px-3 py-1 rounded-full"
+              :class="sortOrder === 'lowToHigh' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
+            >
+              Rating ★ to ★★★
+            </button>
+          </div>
+          
           <div class="space-y-2">
             <!-- All Bookmarks Option -->
             <div 
@@ -335,7 +413,7 @@ onMounted(async () => {
               </span>
             </div>
             
-            <!-- Folder List -->
+            <!-- Folder List with ratings display -->
             <div 
               v-for="folder in folders" 
               :key="folder.id"
@@ -343,10 +421,22 @@ onMounted(async () => {
               :class="currentFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'"
             >
               <div @click="changeFolder(folder.id)" class="flex-grow">
-                <span>{{ folder.name }}</span>
-                <span class="ml-2 bg-gray-200 text-gray-800 px-2 py-1 text-xs rounded-full">
-                  {{ folder.bookmark_count }}
-                </span>
+                <div class="flex items-center">
+                  <span>{{ folder.name }}</span>
+                  <span class="ml-2 bg-gray-200 text-gray-800 px-2 py-1 text-xs rounded-full">
+                    {{ folder.bookmark_count }}
+                  </span>
+                </div>
+                <!-- Show rating stars if the folder has an average score -->
+                <div v-if="folder.averageScore > 0" class="flex mt-1">
+                  <span 
+                    v-for="i in 5" 
+                    :key="i" 
+                    :class="i <= Math.round(folder.averageScore) ? 'text-yellow-500' : 'text-gray-300'"
+                    class="text-xs"
+                  >★</span>
+                  <span class="text-xs text-gray-600 ml-1">({{ folder.averageScore.toFixed(1) }})</span>
+                </div>
               </div>
               <div class="flex space-x-1">
                 <button 
