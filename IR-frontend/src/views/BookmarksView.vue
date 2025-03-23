@@ -207,12 +207,14 @@ const handleFolderDelete = async () => {
 
 // Open move bookmark dialog
 const openMoveDialog = (bookmark) => {
+  console.log("Opening move dialog for bookmark:", bookmark); // Debug log
   bookmarkToMove.value = bookmark;
   moveDialogOpen.value = true;
 };
 
 // Handle bookmark move
 const handleBookmarkMove = async ({ bookmarkId, folderId }) => {
+  console.log("Moving bookmark:", bookmarkId, "to folder:", folderId); // Debug log
   try {
     loading.value = true;
     await folderService.moveBookmark(bookmarkId, folderId);
@@ -441,7 +443,7 @@ onMounted(() => {
   <!-- Move Bookmark Dialog -->
   <MoveBookmarkDialog 
     :is-open="moveDialogOpen"
-    :bookmark-id="bookmarkToMove?.id"
+    :bookmark-id="bookmarkToMove?.id" 
     :current-folder-id="bookmarkToMove?.folder_id"
     @close="moveDialogOpen = false"
     @move="handleBookmarkMove"

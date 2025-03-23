@@ -168,8 +168,9 @@ export const folderService = {
   },
 
   // Move bookmark to folder
-  moveBookmark: async (bookmarkId: number, folderId: number | null) => {
+  moveBookmark: async (bookmarkId: number | string, folderId: number | null) => {
     try {
+      console.log("API: Moving bookmark ID:", bookmarkId, "to folder ID:", folderId); // Debug log
       const response = await api.put(`/bookmarks/${bookmarkId}/move`, {
         folder_id: folderId
       });

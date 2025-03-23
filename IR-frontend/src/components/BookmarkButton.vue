@@ -19,6 +19,7 @@ const isLoading = ref(false);
 const errorMessage = ref('');
 const showMoveDialog = ref(false); // State for showing the modal
 const currentFolderId = ref(null);
+const bookmarkId = ref(null); // Store the bookmark ID
 const rating = ref(0);
 
 // Watch authentication state and reload bookmark status if it changes
@@ -28,6 +29,7 @@ watch(() => authStore.isAuthenticated, (isAuthenticated) => {
   } else if (!isAuthenticated) {
     isBookmarked.value = false;
     currentFolderId.value = null;
+    bookmarkId.value = null;
     rating.value = 0; // Reset rating
   }
 });
@@ -45,7 +47,16 @@ const loadBookmarkState = async () => {
     const response = await bookmarkService.checkBookmark(props.slug);
     isBookmarked.value = response.is_bookmarked;
     currentFolderId.value = response.folder_id || null;
+    bookmarkId.value = response.bookmark_id || null; // Set the bookmark ID
     rating.value = response.rating || 0; // Set the rating value
+    
+    // Debug log to check the response
+    console.log("Bookmark check response:", response);
+    
+    // If we know we're bookmarked but don't have a bookmark ID, fetch it
+    if (isBookmarked.value && !bookmarkId.value) {
+      await fetchBookmarkId();
+    }
   } catch (error) {
     console.error('Error checking bookmark status:', error);
     errorMessage.value = 'Could not check bookmark status';
@@ -54,6 +65,20 @@ const loadBookmarkState = async () => {
     }
   } finally {
     isLoading.value = false;
+  }
+};
+
+// Add this new function to fetch the bookmark ID if needed
+const fetchBookmarkId = async () => {
+  try {
+    const bookmarks = await bookmarkService.getBookmarks();
+    const bookmark = bookmarks.find(b => b.recipe_id === props.slug);
+    if (bookmark) {
+      bookmarkId.value = bookmark.bookmark_id;
+      console.log("Found bookmark ID:", bookmarkId.value);
+    }
+  } catch (error) {
+    console.error("Error fetching bookmark ID:", error);
   }
 };
 
@@ -77,10 +102,12 @@ const toggleBookmark = async () => {
       await bookmarkService.removeBookmark(props.slug);
       isBookmarked.value = false;
       currentFolderId.value = null;
+      bookmarkId.value = null;
       rating.value = 0; // Reset rating
     } else {
-      await bookmarkService.addBookmark(props.slug);
+      const response = await bookmarkService.addBookmark(props.slug);
       isBookmarked.value = true;
+      bookmarkId.value = response.bookmark_id; // Set the bookmark ID after adding
     }
   } catch (error) {
     console.error('Error toggling bookmark:', error);
@@ -150,7 +177,7 @@ onMounted(() => {
     <!-- Move Bookmark Dialog -->
     <MoveBookmarkDialog 
       :is-open="showMoveDialog"
-      :bookmark-id="props.slug"
+      :bookmark-id="bookmarkId"
       :current-folder-id="currentFolderId"
       @close="showMoveDialog = false"
       @move="handleMove"

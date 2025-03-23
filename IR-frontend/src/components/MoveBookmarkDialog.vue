@@ -8,7 +8,7 @@ const props = defineProps({
     required: true
   },
   bookmarkId: {
-    type: Number,
+    type: [Number, String],  // Accept both number and string IDs
     default: null
   },
   currentFolderId: {
@@ -27,6 +27,7 @@ const error = ref('');
 // Watch for dialog open to load folders
 watch(() => props.isOpen, async (isOpen) => {
   if (isOpen) {
+    console.log("Dialog opened with bookmarkId:", props.bookmarkId, "currentFolderId:", props.currentFolderId); // Debug log
     selectedFolderId.value = props.currentFolderId;
     await loadFolders();
   }
@@ -51,12 +52,14 @@ const loadFolders = async () => {
 // Handle move bookmark
 const handleMove = () => {
   if (!props.bookmarkId) {
-    error.value = 'No bookmark selected';
+    console.error("Missing bookmarkId:", props.bookmarkId);
+    error.value = 'Bookmark ID not available. Please try refreshing the page.';
     return;
   }
-  
+
+  console.log("Emitting move event with bookmarkId:", props.bookmarkId, "folderId:", selectedFolderId.value); // Debug log
   emit('move', {
-    bookmarkId: props.bookmarkId, 
+    bookmarkId: props.bookmarkId, // Pass the correct bookmarkId
     folderId: selectedFolderId.value
   });
 };
