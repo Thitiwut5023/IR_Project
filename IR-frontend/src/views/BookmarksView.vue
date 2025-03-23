@@ -250,7 +250,30 @@ const loadingRankings = ref(false);
 const loadRankedFolders = async () => {
   try {
     loadingRankings.value = true;
-    rankedFolders.value = await folderService.getRankedFolders();
+    // Get the raw ranked folders data
+    const rawRankedFolders = await folderService.getRankedFolders();
+    
+    // Process the data to include average scores
+    rankedFolders.value = rawRankedFolders.map(folder => {
+      // Get bookmark count in this folder
+      const folderInfo = folders.value.find(f => f.id === folder.id);
+      const bookmarkCount = folderInfo ? folderInfo.bookmark_count : 0;
+      
+      // Calculate average score (max 5)
+      let averageScore = 0;
+      if (bookmarkCount > 0 && folder.total_score > 0) {
+        averageScore = Math.min(5, folder.total_score / bookmarkCount);
+      }
+      
+      return {
+        ...folder,
+        bookmark_count: bookmarkCount,
+        average_score: averageScore.toFixed(1) // Format to 1 decimal place
+      };
+    });
+    
+    // Sort by average score instead of total score
+    rankedFolders.value.sort((a, b) => b.average_score - a.average_score);
   } catch (error) {
     console.error('Error loading ranked folders:', error);
   } finally {
@@ -258,8 +281,13 @@ const loadRankedFolders = async () => {
   }
 };
 
-onMounted(() => {
-  loadRankedFolders();
+// Make sure we load folders first, then ranked folders
+onMounted(async () => {
+  if (authStore.isAuthenticated) {
+    await loadFolders();
+    await loadBookmarks();
+    loadRankedFolders();
+  }
 });
 </script>
 
@@ -449,12 +477,36 @@ onMounted(() => {
     @move="handleBookmarkMove"
   />
 
-  <div class="mt-8">
+  <!-- Update Folder Rankings section with average scores -->
+  <div class="mt-8 bg-white rounded-lg shadow p-6 max-w-7xl mx-auto">
     <h3 class="text-xl font-semibold mb-4">Folder Rankings</h3>
-    <div v-if="loadingRankings" class="text-center">Loading rankings...</div>
-    <ul v-else>
-      <li v-for="folder in rankedFolders" :key="folder.id" class="mb-2">
-        <span class="font-bold">{{ folder.name }}</span> - Total Score: {{ folder.total_score }}
+    <div v-if="loadingRankings" class="text-center py-4">
+      <div class="inline-block animate-spin rounded-full h-6 w-6 border-4 border-blue-500 border-t-transparent"></div>
+      <p class="mt-2">Loading rankings...</p>
+    </div>
+    <div v-else-if="rankedFolders.length === 0" class="text-gray-500 text-center py-4">
+      No folders with ratings yet
+    </div>
+    <ul v-else class="space-y-3">
+      <li v-for="(folder, index) in rankedFolders" :key="folder.id" 
+          class="p-4 border rounded-lg flex justify-between items-center"
+          :class="{'bg-yellow-50': index === 0, 'bg-gray-50': index === 1, 'bg-orange-50': index === 2}">
+        <div class="flex items-center gap-3">
+          <span class="inline-flex items-center justify-center w-7 h-7 bg-blue-600 text-white rounded-full font-bold">
+            {{ index + 1 }}
+          </span>
+          <div>
+            <span class="font-bold text-lg">{{ folder.name }}</span>
+            <p class="text-sm text-gray-500">{{ folder.bookmark_count }} bookmarks</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="flex">
+            <span v-for="i in 5" :key="i" class="text-xl"
+                  :class="i <= Math.round(folder.average_score) ? 'text-yellow-500' : 'text-gray-300'">★</span>
+          </div>
+          <span class="font-semibold ml-2">{{ folder.average_score }}/5</span>
+        </div>
       </li>
     </ul>
   </div>
@@ -478,5 +530,13 @@ onMounted(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;  
   overflow: hidden;
+}
+
+.text-yellow-500 {
+  color: #f59e0b;
+}
+
+.text-gray-300 {
+  color: #d1d5db;
 }
 </style>
