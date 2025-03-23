@@ -1,62 +1,123 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
+import { useAuthStore } from '@/stores/auth';
+import { bookmarkService } from '@/services/api';
+import { useRouter } from 'vue-router';
 
 // กำหนด props สำหรับรับข้อมูลจาก parent component
 const props = defineProps({
-  slug: String,       // slug ของอาหาร
+  slug: String,       // slug ของอาหาร (now used as recipe_id)
   title: String,      // ชื่ออาหาร
   image: String,      // รูปภาพของอาหาร
   description: String,// คำบรรยายของอาหาร
 });
 
+// Reference to auth store and router
+const authStore = useAuthStore();
+const router = useRouter();
 // สร้าง state สำหรับเก็บสถานะของ bookmark
 const isBookmarked = ref(false);
+const isLoading = ref(false);
+const errorMessage = ref('');
 
-// ฟังก์ชันในการโหลดสถานะ bookmark จาก localStorage
-const loadBookmarkState = () => {
-  const bookmarks = JSON.parse(localStorage.getItem('bookmarks')) || [];
-  // ตรวจสอบว่า slug นี้ถูก bookmark หรือไม่
-  isBookmarked.value = bookmarks.some(bookmark => bookmark.slug === props.slug);
-};
-
-// ฟังก์ชันในการบันทึกสถานะ bookmark ลงใน localStorage
-const saveBookmarkState = () => {
-  let bookmarks = JSON.parse(localStorage.getItem('bookmarks')) || [];
-  const bookmark = { slug: props.slug, title: props.title, image: props.image, description: props.description, category: props.category };
-
-  if (isBookmarked.value) {
-    // ถ้าทำการบันทึก bookmark เพิ่มรายการใหม่เข้าไป
-    if (!bookmarks.some(b => b.slug === props.slug)) {
-      bookmarks.push(bookmark);
-    }
-  } else {
-    // ถ้าลบ bookmark ออกให้ลบรายการที่มี slug เดียวกัน
-    bookmarks = bookmarks.filter(b => b.slug !== props.slug);
+// Watch authentication state and reload bookmark status if it changes
+watch(() => authStore.isAuthenticated, (isAuthenticated) => {
+  if (isAuthenticated && props.slug) {
+    loadBookmarkState();
+  } else if (!isAuthenticated) {
+    isBookmarked.value = false;
   }
-  localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
+});
+
+// ฟังก์ชันในการโหลดสถานะ bookmark จาก API
+const loadBookmarkState = async () => {
+  if (!authStore.isAuthenticated || !props.slug) {
+    isBookmarked.value = false;
+    return;
+  }
+  
+  try {
+    isLoading.value = true;
+    errorMessage.value = '';
+    isBookmarked.value = await bookmarkService.checkBookmark(props.slug);
+  } catch (error) {
+    console.error('Error checking bookmark status:', error);
+    errorMessage.value = 'Could not check bookmark status';
+    // Handle token expiration - if we get 401, logout and redirect
+    if (error.response?.status === 401) {
+      authStore.logout();
+    }
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 // ฟังก์ชันสำหรับสลับสถานะ bookmark เมื่อผู้ใช้คลิก
-const toggleBookmark = (event) => {
+const toggleBookmark = async (event) => {
   event.stopPropagation();
-  isBookmarked.value = !isBookmarked.value;
-  saveBookmarkState();
+  errorMessage.value = '';
+  
+  // Redirect to login if not authenticated
+  if (!authStore.isAuthenticated) {
+    router.push('/login');
+    return;
+  }
+  
+  try {
+    isLoading.value = true;
+    
+    if (isBookmarked.value) {
+      // Remove bookmark
+      await bookmarkService.removeBookmark(props.slug);
+      isBookmarked.value = false;
+    } else {
+      // Add bookmark
+      await bookmarkService.addBookmark(props.slug);
+      isBookmarked.value = true;
+    }
+  } catch (error) {
+    console.error('Error toggling bookmark:', error);
+    errorMessage.value = 'Failed to update bookmark';
+    // Handle token expiration
+    if (error.response?.status === 401) {
+      authStore.logout();
+      router.push('/login');
+    }
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 onMounted(() => {
-  loadBookmarkState();
+  if (props.slug) {
+    loadBookmarkState();
+  }
 });
 </script>
 
 <template>
-  <button @click="toggleBookmark" class="transition-colors" :class="isBookmarked ? 'text-red-500' : 'text-gray-400'">
-    <span v-if="isBookmarked">❤️</span>
-    <span v-else>🤍</span> Add to Bookmark
-  </button>
+  <div>
+    <button 
+      @click="toggleBookmark" 
+      class="transition-colors" 
+      :class="isBookmarked ? 'text-red-500' : 'text-gray-400'"
+      :disabled="isLoading"
+    >
+      <span v-if="isLoading">⏳</span>
+      <span v-else-if="isBookmarked">❤️</span>
+      <span v-else>🤍</span> 
+      {{ isBookmarked ? 'Bookmarked' : 'Add to Bookmark' }}
+    </button>
+    <div v-if="errorMessage" class="text-sm text-red-500 mt-1">{{ errorMessage }}</div>
+  </div>
 </template>
 
 <style scoped>
-button:hover {
+button:hover:not(:disabled) {
   color: #f56565;
+}
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 </style>
