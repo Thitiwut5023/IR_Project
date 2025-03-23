@@ -41,9 +41,13 @@ export default api;
 // Bookmark related API calls
 export const bookmarkService = {
   // Get all bookmarks for logged in user
-  getBookmarks: async () => {
+  getBookmarks: async (folderId?: number) => {
     try {
-      const response = await api.get('/bookmarks');
+      let url = '/bookmarks';
+      if (folderId !== undefined) {
+        url += `?folder_id=${folderId}`;
+      }
+      const response = await api.get(url);
       return response.data;
     } catch (error) {
       console.error('Error fetching bookmarks:', error);
@@ -51,10 +55,18 @@ export const bookmarkService = {
     }
   },
   
-  // Add a bookmark
-  addBookmark: async (recipeId: string) => {
+  // Add a bookmark with optional folder
+  addBookmark: async (recipeId: string, folderId?: number) => {
     try {
-      const response = await api.post('/bookmarks', { recipe_id: recipeId });
+      const payload: { recipe_id: string; folder_id?: number } = { 
+        recipe_id: recipeId 
+      };
+      
+      if (folderId !== undefined) {
+        payload.folder_id = folderId;
+      }
+      
+      const response = await api.post('/bookmarks', payload);
       return response.data;
     } catch (error) {
       console.error('Error adding bookmark:', error);
@@ -78,19 +90,82 @@ export const bookmarkService = {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        return false; // Not bookmarked if not logged in
+        return { is_bookmarked: false };
       }
       
       const response = await api.get(`/bookmarks/check/${recipeId}`);
-      return response.data.is_bookmarked;
+      return response.data; // Return the full response which includes folder_id
     } catch (error) {
       // Specifically handle authentication errors differently
       if (axios.isAxiosError(error) && error.response?.status === 401) {
         console.log('User not authenticated for bookmark check');
-        return false; // Not bookmarked if not authenticated
+        return { is_bookmarked: false };
       }
       console.error('Error checking bookmark status:', error);
-      return false;
+      return { is_bookmarked: false };
+    }
+  }
+};
+
+// Folder related API calls
+export const folderService = {
+  // Get all folders
+  getFolders: async () => {
+    try {
+      const response = await api.get('/folders');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching folders:', error);
+      throw error;
+    }
+  },
+  
+  // Create a new folder
+  createFolder: async (name: string, description?: string) => {
+    try {
+      const response = await api.post('/folders', { 
+        name,
+        description
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating folder:', error);
+      throw error;
+    }
+  },
+  
+  // Update a folder
+  updateFolder: async (folderId: number, data: { name?: string, description?: string }) => {
+    try {
+      const response = await api.put(`/folders/${folderId}`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating folder:', error);
+      throw error;
+    }
+  },
+  
+  // Delete a folder
+  deleteFolder: async (folderId: number) => {
+    try {
+      const response = await api.delete(`/folders/${folderId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting folder:', error);
+      throw error;
+    }
+  },
+
+  // Move bookmark to folder
+  moveBookmark: async (bookmarkId: number, folderId: number | null) => {
+    try {
+      const response = await api.put(`/bookmarks/${bookmarkId}/move`, {
+        folder_id: folderId
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error moving bookmark:', error);
+      throw error;
     }
   }
 };
