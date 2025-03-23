@@ -43,7 +43,7 @@ const truncatedDescription = computed(() => {
 </script>
 
 <template>
-  <div class="card max-w-sm mx-auto bg-white rounded-xl shadow-lg overflow-hidden transition-transform transform hover:scale-105 hover:shadow-2xl">
+  <div class="card max-w-sm mx-auto bg-white rounded-xl shadow-lg overflow-visible transition-transform transform hover:scale-105 hover:shadow-2xl">
     <RouterLink :to="`/food/${slug}`">
       <img :src="props.image" alt="Card image" class="w-full h-56 object-cover rounded-t-xl" />
     </RouterLink>
@@ -59,7 +59,7 @@ const truncatedDescription = computed(() => {
         </p>
       </RouterLink>
     </div>
-    <div class="flex justify-between items-center p-4 border-t border-gray-200">
+    <div class="flex justify-between items-center p-4 border-t border-gray-200 bookmark-container">
       <span v-if="props.category" class="text-sm font-semibold text-gray-700 truncate max-w-[120px]">
         {{ props.category }}
       </span>
@@ -81,6 +81,8 @@ const truncatedDescription = computed(() => {
   height: 100%; /* Make all cards the same height */
   display: flex;
   flex-direction: column;
+  position: relative; /* Add this */
+  overflow: visible; /* Ensure dropdown is not clipped */
 }
 
 .card:hover {
@@ -100,6 +102,12 @@ img {
   height: 200px;
   object-fit: cover;
   width: 100%;
+}
+
+.bookmark-container {
+  position: relative;
+  overflow: visible;
+  z-index: 20; /* Add higher z-index */
 }
 
 /* Add Tailwind-style line clamp utility if not using Tailwind plugins */
