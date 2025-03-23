@@ -2,7 +2,7 @@
 import { Search, Heart, User } from 'lucide-vue-next'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { ref, inject, watch } from 'vue'
+import { ref, inject, watch, type Ref } from 'vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -10,7 +10,7 @@ const route = useRoute()
 const searchInput = ref('')
 
 // Try to inject searchQuery if it exists (provided by HomeView)
-const externalSearchQuery = inject('searchQuery', null)
+const externalSearchQuery = inject<Ref<string | null>>('searchQuery', ref(null))
 
 // Function to handle quick category searches
 const handleCategorySearch = (category: string) => {
@@ -36,6 +36,8 @@ watch(() => externalSearchQuery?.value, (newValue) => {
 }, { immediate: true })
 
 const handleSearch = () => {
+  if (searchInput.value.trim() === '') return;
+  
   if (externalSearchQuery) {
     // Update the injected ref
     externalSearchQuery.value = searchInput.value

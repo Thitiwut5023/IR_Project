@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { jwtDecode } from 'jwt-decode'
+import type { JwtPayload } from 'jwt-decode'
 
 interface UserState {
   token: string;
@@ -14,7 +15,7 @@ export const useAuthStore = defineStore('auth', {
     // Try to decode the stored token when initializing state
     if (token) {
       try {
-        const decoded = jwtDecode(token);
+        const decoded = jwtDecode<JwtPayload & { user_id: number }>(token);
         userId = decoded.user_id;
       } catch (error) {
         console.error('Error decoding stored token:', error);
@@ -35,7 +36,7 @@ export const useAuthStore = defineStore('auth', {
       
       try {
         // Decode JWT token to get user info
-        const decoded: any = jwtDecode(token);
+        const decoded = jwtDecode<JwtPayload & { user_id: number }>(token);
         this.userId = decoded.user_id;
       } catch (error) {
         console.error('Error decoding token:', error);

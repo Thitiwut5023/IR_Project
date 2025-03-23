@@ -13,7 +13,11 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 // Check if we need to bookmark something after login
-const bookmarkAfterLoginData = ref(null)
+interface BookmarkData {
+  slug: string;
+}
+
+const bookmarkAfterLoginData = ref<BookmarkData | null>(null)
 
 onMounted(() => {
   // Check if there's stored bookmark action

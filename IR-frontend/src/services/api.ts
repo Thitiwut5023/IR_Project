@@ -27,7 +27,7 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   response => response,
   error => {
-    if (error.response?.status === 401) {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
       // Handle unauthorized error (e.g., token expired)
       console.log('Authorization error:', error.response.data);
       // Could redirect to login or refresh token here
@@ -85,7 +85,7 @@ export const bookmarkService = {
       return response.data.is_bookmarked;
     } catch (error) {
       // Specifically handle authentication errors differently
-      if (error.response?.status === 401) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
         console.log('User not authenticated for bookmark check');
         return false; // Not bookmarked if not authenticated
       }
